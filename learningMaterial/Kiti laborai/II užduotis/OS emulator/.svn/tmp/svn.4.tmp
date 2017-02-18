@@ -1,0 +1,347 @@
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+
+public class Emulator {
+
+	/* Emulator options */
+	private int memorySize = 656636; // size in words (4bytes)
+
+	public String[] memory = new String[memorySize];
+	public int[] PTR = { 0, 0 }; // a2 byte and a3a4 bytes
+	public int R = 0;
+	public int IC = 0;
+	public int SF = 0;
+	public int MODE = 1;
+	public int TI = 0;
+	public int PI = 0;
+	public int SI = 0;
+	public int IOI = 0;
+	public int[] CHST = { 0, 0, 0 };
+
+	int pageTableFrom = 200; // from word
+	int newVMfrom = 3; // from block
+
+	Emulator() {
+		deleteMemory(); // sets memory's bytes to value = 0
+	}
+
+	public void deleteMemory() {
+		for (int i = 0; i < memorySize; i++) {
+			memory[i] = "";
+		}
+	}
+
+	public String[][] memoryTable() { // creates array[][] for table printing
+		String[][] data = new String[memorySize / 4][5];
+
+		for (int i = 0; i < memorySize; i++) {
+			if (i % 4 == 0) {
+				data[i / 4][0] = Integer.toString(i / 4) + ":";
+			}
+			data[i / 4][i % 4 + 1] = memory[i];
+		}
+
+		return data;
+	}
+
+	public void loadPagingTable(int size) { // load paging table for VM
+		for (int i = 0; i < size * 10; i++) {
+			valueToMemmoryBytes(newVMfrom + i, pageTableFrom * 4 + i * 4, 4);
+		}
+
+		PTR[0] = size;
+		PTR[1] = pageTableFrom / 10; // sets a block number
+	}
+
+	public void loadVM(File file) {
+		try {			
+			FileInputStream fstream = new FileInputStream(file);
+			DataInputStream in = new DataInputStream(fstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+
+			String line = br.readLine();
+
+			loadPagingTable(Integer.parseInt(line));
+			
+			while ((line = br.readLine()) != null) {
+				if(line.length() >= 5) {
+					// word number of memory to load a command
+					int wordNumber = pagingConvert(Integer.parseInt(line.substring(0, 4))); // PTR using
+					
+					if(line.charAt(4) == ':') {
+						if(Character.isDigit(line.charAt(5))) { // if command starts with a number in front
+							valueToMemmoryBytes(Integer.parseInt(line.substring(5, line.length())), wordNumber * 4, 4);
+						} else {
+							memory[wordNumber * 4] = line.substring(5, 6); // first letter
+							memory[wordNumber * 4 + 1] = line.substring(6, 7); // second letter
+							if(line.length() > 7) {
+								valueToMemmoryBytes(Integer.parseInt(line.substring(8, line.length())), wordNumber * 4 + 2, 2);
+							}
+						}
+					}
+				}
+			}
+			in.close();
+		} catch (Exception e) {
+			System.err.println("Error: " + e.getMessage());
+		}
+		
+		//Initialize procedure stack
+		valueToMemmoryBytes(1, pagingConvert(10 * 10 * PTR[0] - 1) * 4 - 6, 2);			
+
+		TI = 10;
+	}
+
+	public void valueToMemmoryBytes(int value, int fromByte, int bytesCount) {
+		if(value <= Math.pow(2, bytesCount * 8) - 1) { // check the max value available in bytes
+			String bits = Integer.toString(decimalToBinary(value));
+			
+			
+			while(bits.length() < bytesCount * 8) { // adds 0 in front of bits string
+				bits = "0" + bits;
+			}
+
+			for(int i=0; i<bytesCount; i++){ // puts bytes values to memory
+				String bitsForByte;
+		
+				if(bits.length() > 8) {
+					bitsForByte = bits.substring(0, 8);
+					bits = bits.substring(8, bits.length());
+				} else {
+					bitsForByte = bits;
+				}
+				memory[fromByte + i] = binaryToDecimal(bitsForByte);
+			}
+		}
+	}
+	
+	public int bytesToValue(int fromByte, int bytesCount) { // returns decimal value from bytes
+		if(memory[fromByte] != "" && memory[fromByte + 1] != "") {
+			String bits = "0";
+			
+			for(int i=0; i<bytesCount; i++) {
+				bits += decimalToBinary(memory[fromByte + i]);
+			}
+			
+			return Integer.parseInt(binaryToDecimal(bits));
+		}
+		return 0;
+	}
+	
+	public int decimalToBinary(int dec) {
+		return Integer.parseInt(Integer.toBinaryString(dec), 10);
+	}
+	
+	public String decimalToBinary(String dec) {
+		return Integer.toBinaryString(Integer.parseInt(dec));
+	}
+
+	public String binaryToDecimal(String bin) {
+		return Integer.toString(Integer.parseInt(bin, 2));
+	}
+	
+	public int pagingConvert(int wordNumber) { // return word number converted by paging table
+		return bytesToValue(PTR[1] * 10 * 4 + ((wordNumber)/ 10) * 4, 4) * 10 + wordNumber % 10;
+	}	
+	
+	public String getCommand() {
+		String cmd = "";
+		
+		cmd += memory[pagingConvert(IC) * 4 + 0]; // first letter
+		cmd += memory[pagingConvert(IC) * 4 + 1]; // second letter
+		
+		return cmd;
+	}
+	
+	public void saveRegisters() {
+		int s = pagingConvert(10 * 10 * PTR[0] - 1) * 4; // last VM byte
+		valueToMemmoryBytes(R, s - 4, 4);
+		valueToMemmoryBytes(IC, s - 6, 2);
+		valueToMemmoryBytes(SF, s - 7, 1);
+	}
+	
+	public int getParam() {
+		int param = 0;
+		
+		if(Character.isDigit(getCommand().charAt(0))) {
+			// 4 bytes' value
+			param = bytesToValue(pagingConvert(IC) * 4, 4);
+		} else {
+			// 2 bytes' value
+			param = bytesToValue(pagingConvert(IC) * 4 + 2, 2);
+		}
+		
+		return param;
+	}
+	
+	public int getWordNum() {
+		return pagingConvert(IC);
+	}
+	
+	public boolean startVM() {
+		String command = getCommand();
+		int x = getParam();
+		
+		IC++;
+		TI--;
+		
+		switch (command) {
+		  case "AD":
+			  cmdAD(x);
+		      break;
+		  case "SB":
+			  cmdSB(x);
+		      break;
+		  case "ML":
+			  cmdML(x);
+		      break;
+		  case "DD":
+			  cmdDD(x);
+		      break;
+		  case "DM":
+			  cmdDM(x);
+		      break;
+		  case "LR":
+			  cmdLR(x);
+		      break;
+		  case "SR":
+			  cmdSR(x);
+		      break;
+		  case "JM":
+			  cmdJM(x);
+		      break;
+		  case "JE":
+			  cmdJE(x);
+		      break;
+		  case "JL":
+			  cmdJE(x);
+		      break;
+		  case "JG":
+			  cmdJE(x);
+		      break;
+		  case "CM":
+			  cmdCM(x);
+		      break;
+		  case "PR":
+			  cmdPR(x);
+		      break;
+		  case "RE":
+			  cmdRE();
+		      break;
+		  case "HL":
+			  IC = 0;
+			  saveRegisters();
+			  return false;
+		}
+		return true;
+	}
+	
+	// VM and RM commands ----------------------------------
+	
+		// Arithmetical ----------------------------------
+	
+	public void cmdAD(int wordNumber) {
+		if(R + bytesToValue(pagingConvert(wordNumber) * 4, 4) <= 65535) { // does the answer fit to register R?
+			R += bytesToValue(pagingConvert(wordNumber) * 4, 4);
+		} else {
+			// interrupt
+		}
+	}
+	
+	public void cmdSB(int wordNumber) {
+		if(R - bytesToValue(pagingConvert(wordNumber) * 4, 4) >= 0 ) { // Negative numbers not supported
+			R -= bytesToValue(pagingConvert(wordNumber) * 4, 4);
+		} else {
+			// interrupt
+		}
+	}
+	
+	public void cmdML(int wordNumber) {
+		if(R * bytesToValue(pagingConvert(wordNumber) * 4, 4) <= 65535) { // does the answer fit to register R?
+			R *= bytesToValue(pagingConvert(wordNumber) * 4, 4);
+		} else {
+			// interrupt
+		}
+	}
+	
+	public void cmdDD(int wordNumber) {
+		if(bytesToValue(pagingConvert(wordNumber) * 4, 4) != 0) { // if not R div 0
+			R = R / bytesToValue(pagingConvert(wordNumber) * 4, 4);
+		} else {
+			// interrupt
+		}
+		
+	}
+	
+	public void cmdDM(int wordNumber) {
+		if(bytesToValue(pagingConvert(wordNumber) * 4, 4) != 0) { // if not R mod 0
+			R = R % bytesToValue(pagingConvert(wordNumber) * 4, 4);
+		} else {
+			// interrupt
+		}
+	}
+	
+		// Data ----------------------------------
+	
+	public void cmdLR(int wordNumber) {
+		R = bytesToValue(pagingConvert(wordNumber) * 4, 4);
+	}
+	
+	public void cmdSR(int wordNumber) {
+		valueToMemmoryBytes(R, pagingConvert(wordNumber) * 4, 4);
+	}
+	
+		// Control transfer ----------------------------------
+	
+	public void cmdJM(int wordNumber) {
+		IC = wordNumber;
+	}
+	
+	public void cmdJE(int wordNumber) {
+		if (SF == 1) {
+			IC = wordNumber;
+		}
+	}
+	
+	public void cmdJL(int wordNumber) {
+		if (SF == 2) {
+			IC = wordNumber;
+		}
+	}
+	
+	public void cmdJG(int wordNumber) {
+		if (SF == 3) {
+			IC = wordNumber;
+		}
+	}
+	
+	public void cmdPR(int wordNumber) {
+		int s = pagingConvert(10 * 10 * PTR[0] - 1) * 4 - 6; // byte where stack pointer is
+		valueToMemmoryBytes(IC, s - 2 * bytesToValue(s, 2), 2);
+		valueToMemmoryBytes(bytesToValue(s, 2) + 1, s, 2);
+		IC = wordNumber;	
+	}
+	
+	public void cmdRE() {
+		int s = pagingConvert(10 * 10 * PTR[0] - 1) * 4 - 6; // byte where stack pointer is
+		valueToMemmoryBytes(bytesToValue(s, 2) - 1, s, 2);
+		IC = bytesToValue(s - 2 * bytesToValue(s, 2), 2);	
+	}
+	
+	
+		// Compare ----------------------------------
+	
+	public void cmdCM(int wordNumber) {
+		if (R == bytesToValue(pagingConvert(wordNumber) * 4, 4)) {
+			SF = 1 ;
+		} else if (R > bytesToValue(pagingConvert(wordNumber) * 4, 4)) {
+			SF = 2 ;
+		} else if (R < bytesToValue(pagingConvert(wordNumber) * 4, 4)) {
+			SF = 3 ;
+		}	
+		
+	}
+}

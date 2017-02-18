@@ -1,0 +1,35 @@
+$$DS
+Laba
+s. I
+vesk
+ ska
+iciu
+nnnn
+Skai
+ciau
+s kv
+adra
+tas:
+$$CS
+PD00
+PD01
+PD02
+PD03
+PD04
+PD05
+GD19
+LR19
+PUSH
+PUSH
+MUL0
+POP0
+SR80
+PD06
+PD07
+PD08
+PD09
+PD10
+PD80
+PD05
+HALT
+$$$$

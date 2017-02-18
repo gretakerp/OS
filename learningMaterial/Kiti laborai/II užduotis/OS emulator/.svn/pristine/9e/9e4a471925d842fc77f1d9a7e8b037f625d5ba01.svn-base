@@ -1,0 +1,35 @@
+public class Emulator {
+	
+	/* Emulator options */
+	private int memorySize = 1024; // size in words (4bytes)
+	
+	public int[] memmory = new int[memorySize];
+	public int PTR = 0;
+	public int R = 0;
+	public int IC = 0;
+	public int SF = 0;
+	
+	Emulator() {
+		deleteMemmory(); // sets memmory's bytes to value = 0
+	}
+	
+	public void deleteMemmory() {
+		for(int i = 0; i < memorySize; i++) {
+			memmory[i] = 0;
+		}
+	}
+	
+	public String[][] memmoryTable() { // creates array[][] for table printing
+		String[][] data = new String[memorySize / 4][5];
+		
+		for(int i = 0; i < memorySize; i++) {
+			if(i % 4 == 0) {
+				data[i / 4][0] = Integer.toString(i / 4) + ":";
+			}
+			data[i / 4][i % 4 + 1] = Integer.toString(memmory[i]);
+		}
+		
+		
+		return data;
+	}
+}

@@ -1,0 +1,7 @@
+#DATASEG:
+DW 'Laba'
+DW 's pa'
+DW 'saul'
+DW 'i+++'
+#CODESEG:
+HALT

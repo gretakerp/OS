@@ -1,0 +1,148 @@
+import java.awt.Color;
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JLabel;
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.JButton;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import javax.swing.JTextPane;
+import javax.swing.JTextField;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+
+public class GUI {
+
+	private JFrame frame;
+	private JTable table;
+	private JTextField textField;
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					UIManager
+							.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+					GUI window = new GUI();
+					window.frame.setResizable(false);
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Create the application.
+	 */
+	public GUI() {
+		initialize();
+	}
+
+	/**
+	 * Initialize the contents of the frame.
+	 */
+	private void initialize() {
+		Emulator main = new Emulator();
+
+		String fields[] = { "Žodis", "1b", "2b", "3b", "4b" };
+
+		frame = new JFrame();
+		frame.setBounds(200, 50, 1000, 600);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+
+		/* Memmory table */
+		table = new JTable(main.memmoryTable(), fields) {
+			DefaultTableCellRenderer renderRight = new DefaultTableCellRenderer();
+
+			{// initializer block
+				renderRight.setHorizontalAlignment(SwingConstants.RIGHT);
+			}
+
+			@Override
+			public TableCellRenderer getCellRenderer(int arg0, int arg1) {
+				return renderRight;
+
+			}
+			
+			public boolean isCellEditable(int row, int column) {                
+                return false;               
+			};
+		};
+		
+		table.setGridColor(new Color(200, 200, 200));
+		table.getTableHeader().setReorderingAllowed(false);
+		table.setShowVerticalLines(false);
+		table.setTableHeader(null);
+		JScrollPane tableScroll = new JScrollPane(table); // add table to scroll panel
+		tableScroll.setBounds(781, 33, 203, 517);
+		frame.getContentPane().add(tableScroll);
+
+		JLabel lblPtr = new JLabel("PTR = " + Integer.toString(main.PTR));
+		lblPtr.setBounds(10, 11, 89, 14);
+		frame.getContentPane().add(lblPtr);
+
+		JLabel lblIc = new JLabel("IC = " + Integer.toString(main.IC));
+		lblIc.setBounds(142, 11, 46, 14);
+		frame.getContentPane().add(lblIc);
+
+		JLabel lblR = new JLabel("R = " + Integer.toString(main.R));
+		lblR.setBounds(10, 33, 46, 14);
+		frame.getContentPane().add(lblR);
+
+		JLabel lblPr = new JLabel("SF = " + Integer.toString(main.SF));
+		lblPr.setBounds(142, 33, 46, 14);
+		frame.getContentPane().add(lblPr);
+
+		JButton btnkrautiProgram = new JButton("Įkrauti programą");
+		btnkrautiProgram.setBounds(10, 538, 113, 23);
+		frame.getContentPane().add(btnkrautiProgram);
+
+		JButton btnNewButton = new JButton("Įvykdyti VM");
+		btnNewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+			}
+		});
+		btnNewButton.setBounds(133, 538, 89, 23);
+		frame.getContentPane().add(btnNewButton);
+
+		JButton btnNewButton_1 = new JButton("Vykdyti per 1 žingsnį");
+		btnNewButton_1.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+			}
+		});
+		btnNewButton_1.setBounds(232, 538, 131, 23);
+		frame.getContentPane().add(btnNewButton_1);
+
+		JButton btnPerkrautiEmuliatori = new JButton("Perkrauti emuliatorių");
+		btnPerkrautiEmuliatori.setBounds(375, 538, 131, 23);
+		frame.getContentPane().add(btnPerkrautiEmuliatori);
+
+		JLabel lblAtminits = new JLabel("Atminits:");
+		lblAtminits.setBounds(792, 11, 46, 14);
+		frame.getContentPane().add(lblAtminits);
+
+		JTextPane txtpnGhj = new JTextPane();
+		txtpnGhj.setText("Emulator: Emuliatorius paleistas sėkmingai");
+		txtpnGhj.setBounds(10, 58, 761, 438);
+		frame.getContentPane().add(txtpnGhj);
+
+		textField = new JTextField();
+		textField.setBounds(62, 507, 709, 20);
+		frame.getContentPane().add(textField);
+		textField.setColumns(10);
+
+		JLabel lblKonsol = new JLabel("Konsolė:");
+		lblKonsol.setBounds(15, 510, 41, 14);
+		frame.getContentPane().add(lblKonsol);
+	}
+}

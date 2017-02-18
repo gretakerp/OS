@@ -1,0 +1,191 @@
+import java.awt.Color;
+import java.awt.EventQueue;
+
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JLabel;
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.JButton;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+import javax.swing.JTextPane;
+import javax.swing.JTextField;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+
+public class GUI {
+
+	private Emulator main = new Emulator();
+	
+	private JFrame frame;
+	private JTable table;
+	private JTextField textField;
+	private JTextPane txtConsole = new JTextPane();
+	
+	/* Registers */
+	private JLabel lblPTR = new JLabel();
+	private JLabel lblIC = new JLabel("IC = " + Integer.toString(main.IC));
+	private JLabel lblR = new JLabel("R = " + Integer.toString(main.R));
+	private JLabel lblSF = new JLabel("SF = " + Integer.toString(main.SF));
+	
+	private JFileChooser programFileChooser = new JFileChooser();
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+					GUI window = new GUI();
+					window.frame.setResizable(false);
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Create the application.
+	 */
+	public GUI() {		
+		initialize();
+	}
+
+	/**
+	 * Initialize the contents of the frame.
+	 */
+	private void initialize() {
+
+		frame = new JFrame();
+		frame.setBounds(200, 50, 1000, 600);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+
+		/* Memory table */	String fields[] = { "Žodis", "1b", "2b", "3b", "4b" };
+		table = new JTable(main.memoryTable(), fields) {
+			DefaultTableCellRenderer renderRight = new DefaultTableCellRenderer();
+
+			{// initializer block
+				renderRight.setHorizontalAlignment(SwingConstants.RIGHT);
+			}
+
+			@Override
+			public TableCellRenderer getCellRenderer(int arg0, int arg1) {
+				return renderRight;
+
+			}
+			
+			public boolean isCellEditable(int row, int column) {                
+                return false;               
+			};
+		};
+		
+		table.setGridColor(new Color(200, 200, 200));
+		table.getTableHeader().setReorderingAllowed(false);
+		table.setShowVerticalLines(false);
+		table.setTableHeader(null);
+		table.setModel(new memoryTable(main.memoryTable()));
+		JScrollPane tableScroll = new JScrollPane(table); // add table to scroll panel
+		tableScroll.setBounds(781, 33, 203, 517);
+		frame.getContentPane().add(tableScroll);
+
+		lblPTR.setBounds(10, 11, 89, 14);
+		frame.getContentPane().add(lblPTR);
+
+		lblIC.setBounds(142, 11, 46, 14);
+		frame.getContentPane().add(lblIC);
+
+		lblR.setBounds(10, 33, 46, 14);
+		frame.getContentPane().add(lblR);
+
+		lblSF.setBounds(142, 33, 46, 14);
+		frame.getContentPane().add(lblSF);
+
+		JButton btnIkrautiPrograma = new JButton("Įkrauti programą");
+		btnIkrautiPrograma.setBounds(10, 538, 113, 23);
+		btnIkrautiPrograma.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				actionChoose(arg0);
+			}
+		});
+		frame.getContentPane().add(btnIkrautiPrograma);
+
+		JButton btnIvykdytiVM = new JButton("Įvykdyti VM");
+		btnIvykdytiVM.setBounds(133, 538, 89, 23);
+		frame.getContentPane().add(btnIvykdytiVM);
+
+		JButton btnIvykdytiZingsni = new JButton("Vykdyti per 1 žingsnį");
+		btnIvykdytiZingsni.setBounds(232, 538, 131, 23);
+		frame.getContentPane().add(btnIvykdytiZingsni);
+
+		JButton btnPerkrautiEmuliatori = new JButton("Perkrauti emuliatorių");
+		btnPerkrautiEmuliatori.setBounds(375, 538, 131, 23);
+		btnPerkrautiEmuliatori.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				actionPerkrauti(arg0);
+			}
+		});
+		frame.getContentPane().add(btnPerkrautiEmuliatori);
+
+		JLabel lblAtminits = new JLabel("Atminits:");
+		lblAtminits.setBounds(792, 11, 46, 14);
+		frame.getContentPane().add(lblAtminits);
+
+		txtConsole.setText("EMULATOR: Emuliatorius paleistas sėkmingai");
+		txtConsole.setEditable(false);
+	    JScrollPane consoleScroll = new JScrollPane(txtConsole);
+	    consoleScroll.setBounds(10, 58, 761, 438);
+	    frame.getContentPane().add(consoleScroll);
+
+		textField = new JTextField();
+		textField.setBounds(62, 507, 709, 20);
+		frame.getContentPane().add(textField);
+		textField.setColumns(10);
+
+		JLabel lblKonsol = new JLabel("Konsolė:");
+		lblKonsol.setBounds(15, 510, 41, 14);
+		frame.getContentPane().add(lblKonsol);
+		
+		refreshGUI();
+	}
+	
+	private void actionChoose(ActionEvent arg0) {
+		programFileChooser.showDialog(null, "Pasirinkti");
+		addConsole("EMULATOR: Pasirinktas programos failas: " + programFileChooser.getSelectedFile().getAbsolutePath());
+		File programFile = new File(programFileChooser.getSelectedFile().getAbsolutePath());
+		
+		main.loadVM(programFile);
+		addConsole("EMULATOR: Programa įkrauta");
+		refreshGUI();
+	}
+	
+	private void addConsole(String text) { // text output to the console
+		txtConsole.setText(txtConsole.getText() + "\n" + text);
+	}
+	
+	private void refreshGUI() {
+		table.setModel(new memoryTable(main.memoryTable()));
+		lblPTR.setText("PTR = " + Integer.toString(main.PTR[0]) + "  " + Integer.toString(main.PTR[1]));
+		lblIC.setText("IC = " + Integer.toString(main.IC));
+		lblR.setText("R = " + Integer.toString(main.R));
+		lblSF.setText("SF = " + Integer.toString(main.SF));
+	}
+	
+	private void actionPerkrauti(ActionEvent arg0) {
+		main = new Emulator();
+		addConsole("EMULATOR: Emuliatorius perkrautas");
+		refreshGUI();
+	}
+}

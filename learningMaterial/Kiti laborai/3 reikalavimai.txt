@@ -1,0 +1,14 @@
+Parengti procesus – jų sąrašas ir aprašai
+Resursai ir procesai
+Proceso ir resursų primityvus deskriptorius
+Planuotojas
+Resursų paskirstymas
+Procesų būsenos
+Apibrėžti resursų lentelę (žr. sąsiuvinį pvz)
+Algoritmai (pateikti diagramomis)
+  procesai
+  primityvai
+  paskirtsytojai/as
+  
+  
+2013-05-21

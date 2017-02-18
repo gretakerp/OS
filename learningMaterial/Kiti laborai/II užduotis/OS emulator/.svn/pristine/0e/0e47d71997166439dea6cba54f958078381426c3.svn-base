@@ -1,0 +1,89 @@
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+
+public class Emulator {
+
+	/* Emulator options */
+	private int memorySize = 1024; // size in words (4bytes)
+
+	public String[] memory = new String[memorySize];
+	public int[] PTR = { 0, 0 }; // a2 byte and a3a4 bytes
+	public int R = 0;
+	public int IC = 0;
+	public int SF = 0;
+
+	int pageTableFrom = 200; // from word
+	int newVMfrom = 3; // from block
+
+	Emulator() {
+		deleteMemory(); // sets memory's bytes to value = 0
+		loadPagingTable(1);
+	}
+
+	public void deleteMemory() {
+		for (int i = 0; i < memorySize; i++) {
+			memory[i] = "";
+		}
+	}
+
+	public String[][] memoryTable() { // creates array[][] for table printing
+		String[][] data = new String[memorySize / 4][5];
+
+		for (int i = 0; i < memorySize; i++) {
+			if (i % 4 == 0) {
+				data[i / 4][0] = Integer.toString(i / 4) + ":";
+			}
+			data[i / 4][i % 4 + 1] = memory[i];
+		}
+
+		return data;
+	}
+
+	public void loadPagingTable(int size) { // load paging table for VM
+		for (int i = 0; i < size * 10; i++) {
+			memory[pageTableFrom * 4 + i] = Integer.toString(newVMfrom + i);
+		}
+
+		PTR[0] = size;
+		PTR[1] = pageTableFrom / 10; // sets a block number
+	}
+
+	public void loadVM(File file) {
+		try {
+			FileInputStream fstream = new FileInputStream(file);
+			DataInputStream in = new DataInputStream(fstream);
+			BufferedReader br = new BufferedReader(new InputStreamReader(in));
+
+			String line;
+
+			while ((line = br.readLine()) != null) {
+				if(line.length() >= 5) {
+					int wordNumber = Integer.parseInt(memory[PTR[1] * 10 * 4 + Integer.parseInt(line.substring(0, 4)) / 10]) * 10 + Integer.parseInt(line.substring(0, 4)); // PTR using
+					if(line.charAt(4) == ':') {
+						if(Character.isDigit(line.charAt(5))) { // if command starts with a number in front
+							memory[wordNumber * 4 + 3] = line.substring(5, line.length());
+						} else {
+							memory[wordNumber * 4] = line.substring(5, 6); // first letter
+							memory[wordNumber * 4 + 1] = line.substring(6, 7); // second letter
+							memory[wordNumber * 4 + 3] = line.substring(7, line.length());
+						}
+					}
+				}
+			}
+			in.close();
+		} catch (Exception e) {
+			System.err.println("Error: " + e.getMessage());
+		}
+	}
+
+	public int decimalToBinary(int dec) {
+		return Integer.parseInt(Integer.toBinaryString(dec), 10);
+	}
+
+	public int binaryToDecimal(int bin) {
+		return Integer.parseInt(Integer.toOctalString(bin), 2);
+	}
+}
